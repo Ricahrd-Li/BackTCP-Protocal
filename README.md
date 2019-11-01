@@ -1,17 +1,10 @@
-# BackTCP-Protocal
-A connection-less reliable transmission protocal implemented in python
 
-# Aim 
-The aim is to implement backTCP protocal. 
-Sender: read file to sender buffer, then encapsule the segmentation with backTCP header, then send the package to receiver
-Receiver: send ACK to sender
-
-# 本质问题
-1. 接收方应该干什么？ 接收包，然后检查序列号，发送ack number给sender。接受方发送的报文只需要包含header！然后header里面序列号为0，只用acknumber是重要的。
-sender每发送一次包就要等待一次receiver发送的ack包。如果等待时间超过timer时间，就重传 （Figure 3.33）
-2. 
-
-# To do list
-step1. 实现本地127.0.0.1端口的sender和receiver（此时不会丢包），打印header检查（使用unittest？）
-step2，在助教的信道上测试
-
+# to be continued
+1. 实现Sender的流水线发送
+    同时实现 Go-back-N 与 选择重传 ``mode = "Go-Back-N" or "Select" ``
+2. 实现Receiver类:
+    a. 接受包并检查seqNum ``recvOnePack()`` 
+    b. 发送ack包,ack包的payload为空 ``sendAck()``
+    c. 对接收到的包进行整理(选择重传情况下) ``sortRecvPack()``
+    d. Go-back-N情况下，把之前的包都丢掉。
+3. 本地测试，打印过程。

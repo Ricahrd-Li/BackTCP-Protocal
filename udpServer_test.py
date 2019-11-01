@@ -9,7 +9,7 @@ sock.bind((UDP_IP, UDP_PORT))
 print("I am listening...")
 while True:
     data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
-    reply = 'OK...' + data.decode("utf-8")
-    reply = reply.encode("utf-8")
-    sock.sendto(reply , addr)
-    print ("received message:", data)
+    # reply = 'OK...' + data.decode("utf-8")
+    # reply = reply.encode("utf-8")
+    # sock.sendto(reply , addr)
+    print ("received message:", str(data))
