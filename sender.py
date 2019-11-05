@@ -5,10 +5,10 @@ from typing import *
 
 '''
 backTcpHeader:
-    u_int32_t srcPort;
-    u_int32_t recvPort;
+    u_int32_t srcPort;  
+    u_int32_t recvPort; 
 
-    u_int8_t seqNum;
+    u_int8_t seqNum;   
     u_int8_t ackNum;
     
     u_int32_t offset;
@@ -18,7 +18,7 @@ backTcpHeader:
 '''
 
 class Sender(Structure):
-    def __init__(self,winSize=4,srcPort=5005,recvPort=5005,payloadSize=64,bufferSize=512,maxTime=10,recvIp="127.0.0.1"):
+    def __init__(self,winSize=4,srcPort=8000,recvPort=5005,payloadSize=64,bufferSize=512,maxTime=10,recvIp="127.0.0.1"):
         self.recvIp:str = recvIp
         self.recvPort:int = recvPort
         self.srcPort:int = srcPort
@@ -69,12 +69,33 @@ class Sender(Structure):
         package = header + payload
         return package
 
-    def sendOnePack(self,package):
+    def sendOnePack(self,package,sequenceNum):
+        headerSize = struct.calcsize("!IIBBIBB")
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.sendto(package, (self.recvIp, self.recvPort))
+            data, addr = sock.recvfrom(1024)
+            print(data)
+            srcPort, recvPort, seqNum, ackNum, offset, winSize, reFlag = struct.unpack("!IIBBIBB",data[0:headerSize])
+            print(srcPort, recvPort, seqNum, ackNum, offset, winSize, reFlag)
+            if ackNum == sequenceNum:
+                print("receiver successfully received the packet. \(^o^)/")
+                return 1
+            else:
+                print("receiver didn't receive the packet! \(TAT)/ ")
+                return 0
 
-    def waitForAck(self):
-        pass
+
+    def waitForAck(self,sequenceNum):
+        headerSize = struct.calcsize("!IIBBIBB")
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            data, addr = sock.recvfrom(1024)
+            print(data)
+            srcPort, recvPort, seqNum, ackNum, offset, winSize, reFlag = struct.unpack("!IIBBIBB",data[0:headerSize])
+            print(srcPort, recvPort, seqNum, ackNum, offset, winSize, reFlag)
+            if ackNum == sequenceNum:
+                return 1
+            else:
+                return 0
 
     def send(self):
         pass
@@ -86,9 +107,10 @@ if __name__ == "__main__":
         data1 = sender.readDataToBuffer(f)
         pack1 = sender.constructPackage()
         print(pack1)
-        sender.sendOnePack(pack1)
-
-        data2 = sender.readDataToBuffer(f)
+        sender.sendOnePack(pack1,sender.seqNum)
+        # print(sender.seqNum)
+        # sender.waitForAck(sender.seqNum)
+        # data2 = sender.readDataToBuffer(f)
         # print(data1)
         # print(data2)
 

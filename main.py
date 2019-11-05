@@ -1,4 +1,5 @@
 from sender import *
+from sender import Sender
 
 class SharedSendBuffer:
     def __init__ (self, bufferSize = 64):
@@ -10,18 +11,20 @@ class SharedSendBuffer:
         return "<shared sender buffer>"
 
     def addToBuf(self, data, len):
-        try:
+        if self.bufferSizeUsed + len > self.bufferSize:
+            print("Wrong! buffer size is not enough")
+            return
+        else:
             self.bufferSizeUsed +=len
             self.buffer += data
-        except self.bufferSizeUsed > self.bufferSize:
-            print("Wrong! buffer size is not enough")
 
     def removeFromBuf(self,len):
-        try: 
+        if self.bufferSizeUsed - len < 0:
+            print("Wrong! new bufferSizeUsed is Negtive")
+            return           
+        else: 
             self.bufferSizeUsed -=len
             self.buffer = self.buffer[:self.bufferSizeUsed-1]
-        except IndexError:
-            print("Wrong! new bufferSizeUsed is Negtive")
     
     def getBufSizeUsed(self):
         return self.bufferSizeUsed
@@ -29,5 +32,7 @@ class SharedSendBuffer:
 
 if __name__ == "__main__":
     buffer = SharedSendBuffer()
+    sender = Sender()
+    
 
 
