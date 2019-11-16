@@ -1,5 +1,6 @@
 import socket
 import struct
+import datetime
 
 class Receiver:
     def __init__(self,ip="127.0.0.1", port=5005,senderIp="127.0.0.1"):
@@ -25,8 +26,10 @@ class Receiver:
         headerSize = struct.calcsize("!IIBBIBB")
 
         while True:
+            # time = datetime.now()
             # buffer size is 1024 bytes
             rawData, addr = sock.recvfrom(1024)  # addr is a tuple: (ip, port)
+            
             print("## receive packet from", addr,"##")
 
             srcPort, recvPort, seqNum, ackNum, offset, winSize, reFlag = struct.unpack("!IIBBIBB",rawData[0:headerSize])
@@ -37,7 +40,7 @@ class Receiver:
             print("data:", data)
             
             # send ackPacket back
-            ackPacket = self.constructAckPacket(addr[1],seqNum) 
+            ackPacket = self.constructAckPacket(addr[1],seqNum+1) 
             sock.sendto(ackPacket, (self.senderIp, addr[1]))
             print(" ")
             print("Sended ack.")
