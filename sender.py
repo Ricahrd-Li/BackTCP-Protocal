@@ -169,7 +169,7 @@ class Sender(Structure):
 
 if __name__ == "__main__":
     sender = Sender()
-    with open("/home/richard/计算机网络/BackTCP-Protocal/testdata.txt","rb") as f:
+    with open("testdata.txt","rb") as f:
         # data1 = sender.readDataToBuffer(f)
         sender.send(f)
         # sender.sendOnePack(f)
