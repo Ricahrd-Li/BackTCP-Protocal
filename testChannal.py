@@ -43,8 +43,17 @@ class Channal:
                             pass
                     
                     else: # 是从receiver发来的ack包
-                        sock.sendto(rawData, (self.ip,self.senderPort))
-
+                        mode = random.randint(1,10)
+                        if mode <= 6: # 正常发送
+                            print("ack正常")
+                            sock.sendto(rawData, (self.ip,self.senderPort))
+                        
+                        elif mode <= 8: # 直接丢包
+                            print("ack丢包。")
+                            continue 
+                        
+                        else: # 序号变
+                            pass
 if __name__ == "__main__":
     testChannal =  Channal()
     testChannal.run()

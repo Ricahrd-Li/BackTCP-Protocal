@@ -48,37 +48,47 @@ class Sender(Structure):
             self.bufferSizeUsed += len(data) 
             return len(data)
         else:
-            # print("Warning: Buffer is full.")
+            print("Warning: Buffer is full.")
             return None
+
+    def isBufferEmpty(self):
+        if self.bufferSizeUsed == 0:
+            return True
+        else:
+            return False
+
 
     def readBuffer(self):
         ''' Function: read data sender buffer. '''
         
         if self.bufferSizeUsed > 0:
             data = self.buffer[0:self.payloadSize+1] # a queue
-            # print(data)
             self.buffer = self.buffer[self.payloadSize+1:] 
             if self.bufferSizeUsed <= 64 :
                 self.bufferSizeUsed = 0 
             else:
                 self.bufferSizeUsed =  self.bufferSizeUsed - 64
-            # print(self.bufferSizeUsed)
             return data 
         else:
-            # print("Warning: buffer is empty.")
+            print("Warning: buffer is empty.")
             return None
 
     def constructHeader(self,seqNum,ackNum,offset,reFlag) -> bytes:
         '''
             Function: construct header. 
-            Param: 
         '''
         header = struct.pack(form, self.srcPort, self.recvPort, seqNum, ackNum, offset, self.winSize, reFlag)
         return header
 
     def constructPackage(self,seqNum, payload = None, ackNum =0, reFlag=0 ) -> bytes:
+        '''
+            Function: constuct package
+            Note: inside this function I call self.readBuffer(), so no need to call self.readBuffer() outside this function!
+        '''
         if payload == None:
             payload = self.readBuffer()
+            if payload == None:
+                return (None,None)
         offset = seqNum * 64
         header = self.constructHeader(seqNum,ackNum,offset,reFlag)
         package = header + payload
@@ -104,26 +114,33 @@ class Sender(Structure):
             return timer
         
         headerSize = struct.calcsize(form)
-        # print(headerSize)
+
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+
             sock.bind((self.ip, self.srcPort))
             baseSeq = 1
             nextSeq = baseSeq
             N = self.winSize
             timer = 0
             
-            pktList = []
+            pktQueue = []
 
-            while self.readDataToBuffer(f) !=0:
-                # 初始发包
-                while nextSeq < baseSeq + N:
-                    pkt,payload = self.constructPackage(seqNum = nextSeq)
-                    pktList.append((payload,nextSeq)) # save pkt 
-                    sock.sendto(pkt, (self.recvIp, self.recvPort))
-                    if baseSeq == nextSeq:
-                        timer = startTimer(timer) 
-                    nextSeq += 1 
+            # 初始1,2,3,4四个包存入发送队列
+            self.readDataToBuffer(f)
+            while nextSeq < baseSeq + N:
+                pkt,payload = self.constructPackage(seqNum = nextSeq)
+                pktQueue.append((pkt, payload,nextSeq)) # save pkt 
 
+                nextSeq += 1 
+
+           
+            while len(pktQueue)!= 0:
+
+                # 发送包队列里面的包
+                timer = startTimer(timer)
+                for item in pktQueue:
+                    sock.sendto(item[0], (self.recvIp, self.recvPort))
+                    
                 # 接收ack 与重传
                 sock.setblocking(0)
                 while not isTimeOut(timer):
@@ -132,34 +149,33 @@ class Sender(Structure):
                         data, addr = sock.recvfrom(1024)
                     except BlockingIOError:
                         pass
+
                     if data != None:
-                        # print(data)
                         srcPort, recvPort, seqNum, ackNum, offset, winSize, reFlag = struct.unpack(form,data[0: headerSize  ])
-                        # print(srcPort, recvPort, seqNum, ackNum, offset, winSize, reFlag)
                         print("ack: " , ackNum)
                         if ackNum >= baseSeq:
-                            pktList = pktList[ackNum - baseSeq :]
-                            baseSeq = ackNum + 1 
-                            if baseSeq == nextSeq:
-                                timer = stopTimer(timer)
-                                break # go to next window 
-                            else:
-                                timer = startTimer(timer)
-                
-                # 超时重传
-                if isTimeOut(timer):
-                    # print("time out.")
-                    timer = stopTimer(timer)
-                    for i in range(nextSeq - baseSeq):
-                        pkt,_ = self.constructPackage(payload = pktList[i][0], seqNum =pktList[i][1], reFlag = 1 )
-                        sock.sendto(pkt, (self.recvIp, self.recvPort))
+                            pktQueue = pktQueue[ackNum - baseSeq + 1 :]
+                            baseSeq = ackNum + 1
 
-                    timer = startTimer(timer)
-                    continue
-                    
+                            # restart timer
+                            timer = startTimer(timer)
+                            
+                            while nextSeq < baseSeq + N:
+                                pkt,payload = self.constructPackage(seqNum = nextSeq)
+                                if pkt == None:
+                                    print("tranfer finish!")
+                                    return
+                                pktQueue.append((pkt, payload,nextSeq)) # save pkt 
+                                nextSeq += 1 
+
+                self.readDataToBuffer(f)
             print("transfer finished.")
 
     def sendOnePack(self,f):
+        '''
+            This function is used to debug.
+            Param: f is an IO class
+        '''
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             self.readDataToBuffer(f)
             pkt, data = self.constructPackage(seqNum=1)
@@ -169,19 +185,7 @@ class Sender(Structure):
 
 if __name__ == "__main__":
     sender = Sender()
-    with open("/home/richard/计算机网络/BackTCP-Protocal/testdata.txt","rb") as f:
-        # data1 = sender.readDataToBuffer(f)
+    with open("testdata.txt","rb") as f:
         sender.send(f)
-        # sender.sendOnePack(f)
-        # sender.sendOnePack(f)
-        # sender.sendOnePack(f)
-        # pack1 = sender.constructPackage()
-        # print(pack1)
-        # sender.sendOnePack(pack1,sender.seqNum)
-        # print(sender.seqNum)
-        # sender.waitForAck(sender.seqNum)
-        # data2 = sender.readDataToBuffer(f)
-        # print(data1)
-        # print(data2)
 
     
