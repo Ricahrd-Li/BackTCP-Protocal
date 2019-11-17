@@ -17,6 +17,8 @@ backTcpHeader:
     u_int8_t reFlag;
 '''
 
+form = "!IIIIIBB"  # 指示报头打包的格式
+ 
 class Sender(Structure):
     def __init__(self, winSize=4, srcPort=8000, recvPort=5005, payloadSize=64, bufferSize=512, maxTime=10, recvIp="127.0.0.1"):
         self.recvIp:str = recvIp
@@ -45,32 +47,42 @@ class Sender(Structure):
             self.bufferSizeUsed += len(data) 
             return len(data)
         else:
-            print("Warning: Buffer is full.")
+            # print("Warning: Buffer is full.")
             return None
 
     def readBuffer(self):
+        ''' Function: read data sender buffer. '''
+        
         if self.bufferSizeUsed > 0:
-            data = self.buffer[0:self.payloadSize-1] # a queue
-            self.buffer = self.buffer[self.payloadSize:] 
+            data = self.buffer[0:self.payloadSize+1] # a queue
+            # print(data)
+            self.buffer = self.buffer[self.payloadSize+1:] 
             if self.bufferSizeUsed <= 64 :
                 self.bufferSizeUsed = 0 
             else:
                 self.bufferSizeUsed =  self.bufferSizeUsed - 64
+            # print(self.bufferSizeUsed)
             return data 
         else:
-            print("Warning: buffer is empty.")
+            # print("Warning: buffer is empty.")
             return None
 
     def constructHeader(self,seqNum,ackNum,offset,reFlag) -> bytes:
-        header = struct.pack("!IIIBIBB", self.srcPort, self.recvPort, seqNum, ackNum, offset, self.winSize, reFlag)
+        '''
+            Function: construct header. 
+            Param: 
+        '''
+        header = struct.pack(form, self.srcPort, self.recvPort, seqNum, ackNum, offset, self.winSize, reFlag)
         return header
 
-    def constructPackage(self,seqNum, ackNum =0, reFlag=0 ) -> bytes:
-        payload = self.readBuffer()
+    def constructPackage(self,seqNum, payload = None, ackNum =0, reFlag=0 ) -> bytes:
+        if payload == None:
+            payload = self.readBuffer()
         offset = seqNum * 64
         header = self.constructHeader(seqNum,ackNum,offset,reFlag)
         package = header + payload
-        return package
+        return (package, payload)
+
 
     def send(self,f):
 
@@ -88,7 +100,8 @@ class Sender(Structure):
             timer = 0
             return timer
         
-        headerSize = struct.calcsize("!IIIBIBB")
+        headerSize = struct.calcsize(form)
+        # print(headerSize)
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             baseSeq = 1
             nextSeq = baseSeq
@@ -100,8 +113,8 @@ class Sender(Structure):
             while self.readDataToBuffer(f) !=0:
                 # 初始发包
                 while nextSeq < baseSeq + N:
-                    pkt = self.constructPackage(seqNum = nextSeq)
-                    pktList.append(pkt) # save pkt 
+                    pkt,payload = self.constructPackage(seqNum = nextSeq)
+                    pktList.append((payload,nextSeq)) # save pkt 
                     sock.sendto(pkt, (self.recvIp, self.recvPort))
                     if baseSeq == nextSeq:
                         timer = startTimer(timer) 
@@ -116,8 +129,10 @@ class Sender(Structure):
                     except BlockingIOError:
                         pass
                     if data != None:
-                        srcPort, recvPort, seqNum, ackNum, offset, winSize, reFlag = struct.unpack("!IIIBIBB",data[0:headerSize])
-                        print(srcPort, recvPort, seqNum, ackNum, offset, winSize, reFlag)
+                        # print(data)
+                        srcPort, recvPort, seqNum, ackNum, offset, winSize, reFlag = struct.unpack(form,data[0: headerSize  ])
+                        # print(srcPort, recvPort, seqNum, ackNum, offset, winSize, reFlag)
+                        # print("ack: " , ackNum)
                         if ackNum > baseSeq:
                             pktList = pktList[ackNum - baseSeq :]
                             baseSeq = ackNum + 1 
@@ -128,23 +143,23 @@ class Sender(Structure):
                                 timer = startTimer(timer)
                 # 超时重传
                 if isTimeOut(timer):
+                    print("time out.")
+                    timer = stopTimer(timer)
                     for i in range(nextSeq - baseSeq):
-                        sock.sendto(pktList[i], (self.recvIp, self.recvPort))
+                        pkt,_ = self.constructPackage(payload = pktList[i][0], seqNum =pktList[i][1], reFlag = 1 )
+                        sock.sendto(pkt, (self.recvIp, self.recvPort))
+
+                    timer = startTimer(timer)
                     continue
                     
             print("transfer finished.")
 
-    # def waitForAck(self,sequenceNum):
-    #     headerSize = struct.calcsize("!IIBBIBB")
-    #     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-    #         data, addr = sock.recvfrom(1024)
-    #         print(data)
-    #         srcPort, recvPort, seqNum, ackNum, offset, winSize, reFlag = struct.unpack("!IIBBIBB",data[0:headerSize])
-    #         print(srcPort, recvPort, seqNum, ackNum, offset, winSize, reFlag)
-    #         if ackNum == sequenceNum:
-    #             return 1
-    #         else:
-    #             return 0
+    def sendOnePack(self,f):
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            self.readDataToBuffer(f)
+            pkt, data = self.constructPackage(seqNum=1)
+            sock.sendto(pkt, (self.recvIp, self.recvPort))
+            print(data)
 
 
 if __name__ == "__main__":
@@ -152,6 +167,9 @@ if __name__ == "__main__":
     with open("/home/richard/计算机网络/BackTCP-Protocal/testdata.txt","rb") as f:
         # data1 = sender.readDataToBuffer(f)
         sender.send(f)
+        # sender.sendOnePack(f)
+        # sender.sendOnePack(f)
+        # sender.sendOnePack(f)
         # pack1 = sender.constructPackage()
         # print(pack1)
         # sender.sendOnePack(pack1,sender.seqNum)
