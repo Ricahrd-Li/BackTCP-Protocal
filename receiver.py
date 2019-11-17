@@ -69,5 +69,7 @@ class Receiver:
                     print("==========================================")
 
 
-    
-
+if __name__ == "__main__":
+    ''' Test buffer '''
+    receiver = Receiver()
+    receiver.startReceiving()
