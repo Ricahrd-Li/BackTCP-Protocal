@@ -95,7 +95,7 @@ class Sender(Structure):
         return (package, payload)
 
 
-    def send(self,f):
+    def SendGoBackN(self,f):
 
         def startTimer(timer):
             timer = time.time()
@@ -186,6 +186,6 @@ class Sender(Structure):
 if __name__ == "__main__":
     sender = Sender()
     with open("testdata.txt","rb") as f:
-        sender.send(f)
+        sender.SendGoBackN(f)
 
     

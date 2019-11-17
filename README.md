@@ -1,4 +1,8 @@
 
+# Content
+Implementation of testChannal, sender and recevier \
+the send mode is go back n.
+
 # How to use 
 
 1. run testChannal.py first
