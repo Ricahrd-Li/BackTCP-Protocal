@@ -20,10 +20,11 @@ backTcpHeader:
 form = "!IIIIIBB"  # 指示报头打包的格式
  
 class Sender(Structure):
-    def __init__(self, winSize=4, srcPort=8000, recvPort=5005, payloadSize=64, bufferSize=512, maxTime=10, recvIp="127.0.0.1"):
+    def __init__(self, winSize=4, srcPort=8000, recvPort=6667, payloadSize=64, bufferSize=512, maxTime=10,srcIp = "127.0.0.1", recvIp="127.0.0.1"):
         self.recvIp:str = recvIp
         self.recvPort:int = recvPort
         self.srcPort:int = srcPort
+        self.ip = srcIp
 
         self.payloadSize:int = payloadSize
         self.bufferSize:int = bufferSize
@@ -91,6 +92,8 @@ class Sender(Structure):
             return timer
 
         def isTimeOut(timer):
+            if timer == 0: # timer is stopped
+                return False
             if time.time() - timer > 0.01 :
                 return True
             else:
@@ -103,6 +106,7 @@ class Sender(Structure):
         headerSize = struct.calcsize(form)
         # print(headerSize)
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.bind((self.ip, self.srcPort))
             baseSeq = 1
             nextSeq = baseSeq
             N = self.winSize
@@ -132,8 +136,8 @@ class Sender(Structure):
                         # print(data)
                         srcPort, recvPort, seqNum, ackNum, offset, winSize, reFlag = struct.unpack(form,data[0: headerSize  ])
                         # print(srcPort, recvPort, seqNum, ackNum, offset, winSize, reFlag)
-                        # print("ack: " , ackNum)
-                        if ackNum > baseSeq:
+                        print("ack: " , ackNum)
+                        if ackNum >= baseSeq:
                             pktList = pktList[ackNum - baseSeq :]
                             baseSeq = ackNum + 1 
                             if baseSeq == nextSeq:
@@ -141,9 +145,10 @@ class Sender(Structure):
                                 break # go to next window 
                             else:
                                 timer = startTimer(timer)
+                
                 # 超时重传
                 if isTimeOut(timer):
-                    print("time out.")
+                    # print("time out.")
                     timer = stopTimer(timer)
                     for i in range(nextSeq - baseSeq):
                         pkt,_ = self.constructPackage(payload = pktList[i][0], seqNum =pktList[i][1], reFlag = 1 )

@@ -5,7 +5,7 @@ import datetime
 form = "!IIIIIBB"
 
 class Receiver:
-    def __init__(self,ip="127.0.0.1", port=5005,senderIp="127.0.0.1"):
+    def __init__(self,ip="127.0.0.1", port=6666,senderIp="127.0.0.1"):
         self.ip = ip
         self.port = port
         self.senderIp = senderIp
@@ -44,29 +44,31 @@ class Receiver:
 
             srcPort, recvPort, seqNum, ackNum, offset, winSize, reFlag = struct.unpack(form,rawData[0:headerSize])
             data = rawData[headerSize:]
-            if reFlag == 0 :
+            # if reFlag == 0 :
                 # print("recive header:", srcPort, recvPort, seqNum, ackNum, offset, winSize, reFlag)
-                print("recive seq:",  seqNum)
+            print("recive seq:",  seqNum)
+            print(" ")
+            if seqNum != recvBase + 1:
+                ackPacket = self.constructAckPacket(addr[1],recvBase)
+                sock.sendto(ackPacket, (self.senderIp, addr[1]))
+                # print(data)
                 print(" ")
-                if seqNum != recvBase + 1:
-                    ackPacket = self.constructAckPacket(addr[1],recvBase+1)
-                    sock.sendto(ackPacket, (self.senderIp, addr[1]))
-                    # print(data)
-                    print(" ")
-                    print("Sended ack.")
-                    print("==========================================")
-                    continue
-                else:
-                    print("data:", data)
-                    # f.write(data)
-                    recvBuffer +=data
-                    recvBase +=1
-                    # send ackPacket back
-                    ackPacket = self.constructAckPacket(addr[1],recvBase + 1) 
-                    sock.sendto(ackPacket, (self.senderIp, addr[1]))
-                    print(" ")
-                    print("Sended ack.")
-                    print("==========================================")
+                print("Sended ack：", recvBase)
+                print("==========================================")
+                continue
+            else:
+                print("data:", data)
+                # f.write(data)
+                recvBuffer +=data
+                recvBase +=1
+                # send ackPacket back
+                ackPacket = self.constructAckPacket(addr[1],recvBase) 
+                sock.sendto(ackPacket, (self.senderIp, addr[1]))
+                print(" ")
+                print("Sended ack.")
+                print("==========================================")
+            # if reFlag == 1:
+
 
 
 if __name__ == "__main__":
