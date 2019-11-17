@@ -1,5 +1,9 @@
+# Prequisites
 
-# How to use 
+`Python 3.6+`
 
-1. run receiver.py first
-2. then run sender.py (remember to revise the file path. )
+# How to use
+
+1. run `python receiver.py`, which starts the receiver listening port.
+2. run `python testChannal.py`.
+3. run `python sender.py`
