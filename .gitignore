@@ -7,3 +7,5 @@ testdata.txt
 udp*
 .vscode
 __pycache__
+report*
+*.log
