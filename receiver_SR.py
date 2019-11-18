@@ -5,10 +5,11 @@ import datetime
 form = "!IIIIIBB"
 
 class Receiver:
-    def __init__(self,ip="127.0.0.1", port=6666,senderIp="127.0.0.1"):
+    def __init__(self,ip="127.0.0.1", port=6666,senderIp="127.0.0.1",winSize=4):
         self.ip = ip
         self.port = port
         self.senderIp = senderIp
+        self.winSize = winSize
 
     def constructAckPacket(self,addr,ackNum) -> bytes:
         # let seqnum = 0 and offset = 0
@@ -28,7 +29,8 @@ class Receiver:
         print("=============================================")
 
         headerSize = struct.calcsize(form)
-        recvBase = 0
+        recvBase = 1
+        recvWin = dict.fromkeys(range(recvBase, recvBase+self.winSize))
         recvBuffer = b""
         while True:
             # time = datetime.now()
@@ -48,25 +50,38 @@ class Receiver:
                 # print("recive header:", srcPort, recvPort, seqNum, ackNum, offset, winSize, reFlag)
             print("recive seq:",  seqNum)
             print(" ")
-            if seqNum != recvBase + 1:
-                ackPacket = self.constructAckPacket(addr[1],recvBase)
+            print(recvWin)
+            if recvWin.__contains__(seqNum):
+                recvWin[seqNum] = data
+                ackPacket = self.constructAckPacket(addr[1],seqNum) 
                 sock.sendto(ackPacket, (self.senderIp, addr[1]))
-                # print(data)
-                print(" ")
-                print("Sended ack：", recvBase)
-                print("==========================================")
-                continue
-            else:
-                print("data:", data)
-                # f.write(data)
-                recvBuffer +=data
-                recvBase +=1
-                # send ackPacket back
-                ackPacket = self.constructAckPacket(addr[1],recvBase) 
-                sock.sendto(ackPacket, (self.senderIp, addr[1]))
-                print(" ")
-                print("Sended ack.")
-                print("==========================================")
+                move = 0
+                for i in recvWin.keys():
+                    if recvWin[i] == None:
+                        break
+                    recvBuffer += recvWin[i]
+                    move += 1
+                for j in range(0,move):
+                    del recvWin[list(recvWin.keys())[0]]
+                    recvWin[list(recvWin.keys())[-1]+1] = None
+            #     ackPacket = self.constructAckPacket(addr[1],recvBase)
+            #     sock.sendto(ackPacket, (self.senderIp, addr[1]))
+            #     # print(data)
+            #     print(" ")
+            #     print("Sended ack：", recvBase)
+            #     print("==========================================")
+            #     continue
+            # else:
+            #     print("data:", data)
+            #     # f.write(data)
+            #     recvBuffer +=data
+            #     recvBase +=1
+            #     # send ackPacket back
+            #     ackPacket = self.constructAckPacket(addr[1],recvBase) 
+            #     sock.sendto(ackPacket, (self.senderIp, addr[1]))
+            #     print(" ")
+            #     print("Sended ack.")
+            #     print("==========================================")
             # if reFlag == 1:
 
 

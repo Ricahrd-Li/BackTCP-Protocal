@@ -185,7 +185,7 @@ class Sender(Structure):
 
 if __name__ == "__main__":
     sender = Sender()
-    with open("testdata.txt","rb") as f:
+    with open("input.bin","rb") as f:
         sender.SendGoBackN(f)
 
     

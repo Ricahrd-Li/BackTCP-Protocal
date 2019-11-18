@@ -44,7 +44,7 @@ class Channal:
                     
                     else: # 是从receiver发来的ack包
                         mode = random.randint(1,10)
-                        if mode <= 6: # 正常发送
+                        if mode <= 10: # 正常发送
                             print("ack正常")
                             sock.sendto(rawData, (self.ip,self.senderPort))
                         
