@@ -4,8 +4,7 @@
 
 # Content
 
-Implementation of testChannal, sender and recevier \
-the send mode is go back n.
+Implementation of testChannal, sender and recevier. There are two re-transmission methods: go-back-N and selecion, you can find the code at `sender.py` , `sender_SR.py`, respectively.
 
 # How to use
 
